@@ -95,6 +95,10 @@ class CodeRepository(
     fun installPlugin(name: String, dexBytes: ByteArray, entryClass: String): Boolean {
         val dex = File(pluginsDir, "$name.dex")
         dex.writeBytes(dexBytes)
+        // 自 Android 14 (API 34) 起，DexClassLoader 拒绝加载“可写”的 dex 文件，
+        // 否则抛 SecurityException: Writable dex file ... is not allowed。
+        // targetSdk 34 必须先把 dex 置为只读，否则插件热加载会直接失败。
+        dex.setReadOnly()
         File(pluginsDir, "$name.entry").writeText(entryClass)
         return true
     }

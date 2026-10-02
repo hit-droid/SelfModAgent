@@ -75,9 +75,15 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     fun config(): LlmConfig = app.settings.llmConfig()
     fun setConfig(cfg: LlmConfig) {
+        val wasLocal = app.settings.llmConfig().isLocal
         app.settings.setLlmConfig(cfg)
-        // System prompt doesn't change with config, so no reset needed.
+        // 本地模型的系统提示里带 ReAct 协议，切换后需要重建历史。
+        if (wasLocal != cfg.isLocal) reset()
     }
+
+    fun localEngines() = app.localEngines
+
+    fun unloadLocalModels() = app.llmRouter.unloadAll()
 
     fun repo() = app.repo
     fun plugins() = app.plugins

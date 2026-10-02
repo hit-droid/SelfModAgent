@@ -1,7 +1,7 @@
 package com.selfmod.agent.agent
 
 import com.selfmod.agent.llm.ChatMessage
-import com.selfmod.agent.llm.LlmClient
+import com.selfmod.agent.llm.LlmRouter
 import com.selfmod.agent.plugin.PluginRegistry
 import com.selfmod.agent.repo.CodeRepository
 import com.selfmod.agent.script.ScriptApi
@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
  * All steps are streamed to [onStep] so the UI can render a live trace.
  */
 class AgentCore(
-    private val llmClient: LlmClient,
+    private val llm: LlmRouter,
     private val settings: SettingsStore,
     scriptEngine: ScriptEngine,
     scriptHost: ScriptApi,
@@ -31,7 +31,10 @@ class AgentCore(
         registerAll(Tools.all(scriptEngine, scriptHost, repo, plugins, settings, uiNotifier))
     }
 
-    fun systemPrompt(): String = PromptTemplates.system(tools.names())
+    fun systemPrompt(): String {
+        val local = settings.llmConfig().isLocal
+        return PromptTemplates.systemFor(local, tools.names())
+    }
 
     suspend fun run(
         history: MutableList<ChatMessage>,
@@ -44,8 +47,12 @@ class AgentCore(
         var iteration = 0
         while (iteration++ < MAX_ITERATIONS) {
             val cfg = settings.llmConfig()
+            var streamed = false
             val result = try {
-                llmClient.chat(cfg, history, tools.specs())
+                llm.chat(cfg, history, tools.specs()) { token ->
+                    streamed = true
+                    onStep(AgentStep.Thought(token))
+                }
             } catch (e: Throwable) {
                 onStep(AgentStep.Error(e.message ?: e.toString()))
                 return@withContext "ERROR: ${e.message}"
@@ -59,7 +66,8 @@ class AgentCore(
                 )
             )
 
-            if (result.content.isNotBlank()) {
+            // 本地引擎已把 token 流式推成多个 Thought，避免再整段重复一次。
+            if (!streamed && result.content.isNotBlank()) {
                 onStep(AgentStep.Thought(result.content))
             }
 

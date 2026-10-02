@@ -28,7 +28,13 @@ class LlmClient(
             .addHeader("Accept", "application/json")
             .post(body.toRequestBody(json))
             .build()
-        client.newCall(req).execute().use { resp ->
+        // Honor the per-config timeout instead of the client's fixed default.
+        val active = if (config.timeoutSeconds > 0) {
+            client.newBuilder().readTimeout(config.timeoutSeconds, TimeUnit.SECONDS).build()
+        } else {
+            client
+        }
+        active.newCall(req).execute().use { resp ->
             val raw = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) {
                 throw LlmException(
@@ -99,7 +105,14 @@ class LlmClient(
         val choice = obj.optJSONArray("choices")?.optJSONObject(0)
             ?: throw LlmException(500, "No choices in response: $raw")
         val msg = choice.optJSONObject("message")
-        val content = msg?.optString("content") ?: ""
+        // OpenAI-compatible APIs return `"content": null` on assistant turns
+        // that only carry tool_calls. optString would turn that into the string
+        // "null", so normalize it to an empty string.
+        val content = when {
+            msg == null -> ""
+            msg.isNull("content") -> ""
+            else -> msg.optString("content")
+        }
         val calls = ArrayList<ToolCall>()
         msg?.optJSONArray("tool_calls")?.let { arr ->
             for (i in 0 until arr.length()) {

@@ -5,7 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import com.selfmod.agent.llm.ChatMessage
-import com.selfmod.agent.llm.LlmClient
+import com.selfmod.agent.llm.LlmRouter
 import com.selfmod.agent.plugin.PluginRegistry
 import com.selfmod.agent.repo.CodeRepository
 import com.selfmod.agent.store.SettingsStore
@@ -23,7 +23,7 @@ class ScriptHost(
     private val repo: CodeRepository,
     private val plugins: PluginRegistry,
     private val settings: SettingsStore,
-    private val llmClient: LlmClient,
+    private val llmRouter: LlmRouter,
     private val httpClient: OkHttpClient = defaultHttp(),
     private val uiNotifier: (String, String) -> Unit = { _, _ -> },
 ) : ScriptApi {
@@ -52,7 +52,7 @@ class ScriptHost(
     }
 
     override fun llm(prompt: String): String {
-        val r = llmClient.chat(settings.llmConfig(), listOf(ChatMessage("user", prompt)))
+        val r = llmRouter.chat(settings.llmConfig(), listOf(ChatMessage("user", prompt)))
         return r.content
     }
 
@@ -63,7 +63,7 @@ class ScriptHost(
             val o = arr.optJSONObject(i) ?: continue
             msgs += ChatMessage(role = o.optString("role"), content = o.optString("content"))
         }
-        return llmClient.chat(settings.llmConfig(), msgs).content
+        return llmRouter.chat(settings.llmConfig(), msgs).content
     }
 
     override fun readScript(name: String): String? = runCatching { repo.readScript(name) }.getOrNull()

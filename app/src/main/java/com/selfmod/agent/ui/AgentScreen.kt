@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -60,7 +59,8 @@ fun AgentScreen(vm: AgentViewModel) {
         if (trace.isNotEmpty()) listState.animateScrollToItem(trace.lastIndex)
     }
 
-    val cfg = remember { vm.config() }
+    // Re-read on each recomposition so backend switches show up immediately.
+    val cfg = vm.config()
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -74,7 +74,8 @@ fun AgentScreen(vm: AgentViewModel) {
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    "模型: ${cfg.model.ifEmpty { "(未配置)" }}",
+                    "模型: ${cfg.model.ifEmpty { "(未配置)" }}" +
+                        if (cfg.isLocal) " · 本地/${cfg.backend.name.lowercase()}" else " · 远程",
                     color = TextSecondary,
                     fontSize = 12.sp,
                 )

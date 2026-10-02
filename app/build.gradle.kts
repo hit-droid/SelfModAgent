@@ -15,6 +15,10 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            // MediaPipe GenAI 原生库体积较大，只保留 arm64-v8a。
+            abiFilters += "arm64-v8a"
+        }
     }
 
     buildTypes {
@@ -54,13 +58,12 @@ dependencies {
     implementation(libs.rhino)
     implementation(libs.okhttp)
     implementation(libs.coroutines.android)
+    // 本地离线推理（MediaPipe LLM Inference）。缺省只打包 arm64-v8a。
+    implementation(libs.mediapipe.genai)
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test.ext:junit:1.1.5")
-    testImplementation("org.robolectric:robolectric:4.12.1")
-    // Compose UI 测试需要
-    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // 单元测试里用真实 org.json，避免 Android stub 返回 null。
+    testImplementation("org.json:json:20231013")
 
     debugImplementation(libs.compose.ui.tooling)
 }

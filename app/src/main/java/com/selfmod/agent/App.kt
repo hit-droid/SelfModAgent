@@ -4,6 +4,10 @@ import android.app.Application
 import android.util.Log
 import com.selfmod.agent.agent.AgentCore
 import com.selfmod.agent.llm.LlmClient
+import com.selfmod.agent.llm.LlmRouter
+import com.selfmod.agent.llm.LocalLlmEngine
+import com.selfmod.agent.llm.MediaPipeEngine
+import com.selfmod.agent.llm.MnnEngine
 import com.selfmod.agent.plugin.PluginRegistry
 import com.selfmod.agent.repo.CodeRepository
 import com.selfmod.agent.script.ScriptApi
@@ -33,6 +37,8 @@ class App : Application() {
     lateinit var repo: CodeRepository
     lateinit var plugins: PluginRegistry
     lateinit var llmClient: LlmClient
+    lateinit var llmRouter: LlmRouter
+    lateinit var localEngines: List<LocalLlmEngine>
     lateinit var scriptEngine: ScriptEngine
     lateinit var scriptHost: ScriptApi
     lateinit var agent: AgentCore
@@ -64,17 +70,22 @@ class App : Application() {
         runCatching { repo.importAssetScript(this, "demo.js", "demo") }
         plugins = PluginRegistry(repo, File(files, "odex"))
         llmClient = LlmClient()
+        localEngines = listOf(
+            MediaPipeEngine(this),
+            MnnEngine(),
+        )
+        llmRouter = LlmRouter(llmClient, localEngines)
         scriptEngine = ScriptEngine()
         scriptHost = ScriptHost(
             appContext = this,
             repo = repo,
             plugins = plugins,
             settings = settings,
-            llmClient = llmClient,
+            llmRouter = llmRouter,
             uiNotifier = uiNotifier,
         )
         agent = AgentCore(
-            llmClient = llmClient,
+            llm = llmRouter,
             settings = settings,
             scriptEngine = scriptEngine,
             scriptHost = scriptHost,

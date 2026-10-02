@@ -45,4 +45,39 @@ object PromptTemplates {
         appendLine()
         appendLine("本次可用的工具列表：" + toolNames.joinToString(", "))
     }
+
+    /**
+     * Extra instructions injected for local engines that have no native
+     * function-calling. The model must emit the ReAct markers that
+     * [com.selfmod.agent.llm.ReActParser] understands.
+     */
+    fun reactAddendum(toolNames: List<String>): String = buildString {
+        appendLine()
+        appendLine("本地模型没有 function calling，必须严格按下面的纯文本协议行动：")
+        appendLine()
+        appendLine("需要调用工具时，只输出：")
+        appendLine("Thought: <一两句计划>")
+        appendLine("Action: <工具名，必须是下面列表之一>")
+        appendLine("Action Input: <一行 JSON 对象>")
+        appendLine()
+        appendLine("任务完成、不再需要工具时，只输出：")
+        appendLine("Thought: <一两句总结>")
+        appendLine("Final Answer: <给用户的最终答复>")
+        appendLine()
+        appendLine("规则：")
+        appendLine("- Action 与 Final Answer 不要同时出现。")
+        appendLine("- Action Input 必须是合法 JSON 对象，不要包 markdown 代码块。")
+        appendLine("- 一次只调用一个工具，等观察结果再决定下一步。")
+        appendLine("- 不要编造不存在的工具名。")
+        appendLine()
+        appendLine("可用工具名：" + toolNames.joinToString(", "))
+        appendLine()
+        appendLine("示例：")
+        appendLine("Thought: 先列出已有脚本。")
+        appendLine("Action: list_scripts")
+        appendLine("Action Input: {}")
+    }
+
+    fun systemFor(local: Boolean, toolNames: List<String>): String =
+        if (local) system(toolNames) + reactAddendum(toolNames) else system(toolNames)
 }
