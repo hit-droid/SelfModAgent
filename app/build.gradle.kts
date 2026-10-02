@@ -41,6 +41,10 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+    testOptions {
+        // android.util.Log 等框架方法在 JVM 单测里返回默认值而不是抛 "not mocked"。
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {

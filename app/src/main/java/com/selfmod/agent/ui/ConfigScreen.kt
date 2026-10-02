@@ -226,6 +226,7 @@ private fun RemoteSection(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LocalSection(
     backend: BackendKind,
